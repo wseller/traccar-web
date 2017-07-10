@@ -1,5 +1,5 @@
 (function () {
-    var debugMode, touchMode, locale, localeParameter, extjsVersion, fontAwesomeVersion, olVersion, i, language, languages;
+    var debugMode, touchMode, locale, localeParameter, extjsVersion, proj4jsVersion, fontAwesomeVersion, olVersion, i, language, languages;
 
     function addStyleFile(file) {
         var link = document.createElement('link');
@@ -45,10 +45,14 @@
         'fr': { name: 'Français', code: 'fr' },
         'he': { name: 'עברית', code: 'he' },
         'hi': { name: 'हिन्दी', code: 'en' },
+        'hr': { name: 'Hrvatski', code: 'hr' },
         'hu': { name: 'Magyar', code: 'hu' },
         'id': { name: 'Bahasa Indonesia', code: 'id' },
         'it': { name: 'Italiano', code: 'it' },
+        'ja': { name: '日本語', code: 'ja' },
         'ka': { name: 'ქართული', code: 'en' },
+        'kk': { name: 'Қазақша', code: 'en' },
+        'ko': { name: '한국어', code: 'ko' },
         'km': { name: 'ភាសាខ្មែរ', code: 'en' },
         'lo': { name: 'ລາວ', code: 'en' },
         'lt': { name: 'Lietuvių', code: 'lt' },
@@ -68,13 +72,15 @@
         'sl': { name: 'Slovenščina', code: 'sl' },
         'sq': { name: 'Shqipëria', code: 'en' },
         'sr': { name: 'Srpski', code: 'sr' },
+        'sv': { name: 'Svenska', code: 'sv' },
         'ta': { name: 'தமிழ்', code: 'en' },
         'th': { name: 'ไทย', code: 'th' },
         'tr': { name: 'Türkçe', code: 'tr' },
         'uk': { name: 'Українська', code: 'ukr' },
         'uz': { name: 'Oʻzbekcha', code: 'en' },
         'vi': { name: 'Tiếng Việt', code: 'en' },
-        'zh': { name: '中文', code: 'zh_CN' }
+        'zh': { name: '中文', code: 'zh_CN' },
+        'zh_TW': { name: '中文 (Taiwan)', code: 'zh_TW' }
     };
 
     localeParameter = window.location.search.match(/locale=([^&#]+)/);
@@ -119,7 +125,8 @@
 
     extjsVersion = '6.2.0';
     fontAwesomeVersion = '4.7.0';
-    olVersion = '4.0.0';
+    olVersion = '4.2.0';
+    proj4jsVersion = '2.4.3';
 
     if (debugMode) {
         addScriptFile('//cdnjs.cloudflare.com/ajax/libs/extjs/' + extjsVersion + '/ext-all-debug.js');
@@ -144,16 +151,16 @@
         addScriptFile('//cdnjs.cloudflare.com/ajax/libs/ol3/' + olVersion + '/ol.js');
     }
 
-    addSvgFile('images/default.svg', 'defaultSvg');
-    addSvgFile('images/arrow.svg', 'arrowSvg');
-    addSvgFile('images/car.svg', 'carSvg');
-    addSvgFile('images/bus.svg', 'busSvg');
-    addSvgFile('images/truck.svg', 'truckSvg');
-    addSvgFile('images/ship.svg', 'shipSvg');
-    addSvgFile('images/plane.svg', 'planeSvg');
-    addSvgFile('images/motorcycle.svg', 'motorcycleSvg');
-    addSvgFile('images/bicycle.svg', 'bicycleSvg');
-    addSvgFile('images/person.svg', 'personSvg');
-    addSvgFile('images/animal.svg', 'animalSvg');
+    if (debugMode) {
+        addScriptFile('//cdnjs.cloudflare.com/ajax/libs/proj4js/' + proj4jsVersion + '/proj4-src.js');
+    } else {
+        addScriptFile('//cdnjs.cloudflare.com/ajax/libs/proj4js/' + proj4jsVersion + '/proj4.js');
+    }
 
+    window.Images = ['arrow', 'default', 'animal', 'bicycle', 'boat', 'bus', 'car', 'crane', 'helicopter',
+        'motorcycle', 'offroad', 'person', 'pickup', 'plane', 'ship', 'tractor', 'truck', 'van'];
+
+    for (i = 0; i < window.Images.length; i++) {
+        addSvgFile('images/' + window.Images[i] + '.svg', window.Images[i] + 'Svg');
+    }
 })();

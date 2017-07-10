@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Anton Tananaev (anton@traccar.org)
+ * Copyright 2015 - 2017 Anton Tananaev (anton@traccar.org)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,11 +19,39 @@ Ext.define('Traccar.controller.Root', {
     extend: 'Ext.app.Controller',
 
     requires: [
-        'Traccar.view.Login',
+        'Traccar.view.dialog.Login',
         'Traccar.view.Main',
         'Traccar.view.MainMobile',
         'Traccar.model.Position'
     ],
+
+    init: function () {
+        var i, data, attribute, chartTypesStore = Ext.getStore('ReportChartTypes');
+        Ext.state.Manager.setProvider(new Ext.state.CookieProvider());
+        data = Ext.getStore('PositionAttributes').getData().items;
+        for (i = 0; i < data.length; i++) {
+            attribute = data[i];
+            Traccar.model.Position.addFields([{
+                name: 'attribute.' + attribute.get('key'),
+                attributeKey: attribute.get('key'),
+                calculate: this.calculateAttribute,
+                persist: false
+            }]);
+            if (attribute.get('valueType') === 'number') {
+                chartTypesStore.add({
+                    key: 'attribute.' + attribute.get('key'),
+                    name: attribute.get('name')
+                });
+            }
+        }
+    },
+
+    calculateAttribute: function (data) {
+        var value = data.attributes[this.attributeKey];
+        if (value !== undefined) {
+            return Traccar.AttributeFormatter.getAttributeConverter(this.attributeKey)(value);
+        }
+    },
 
     onLaunch: function () {
         Ext.Ajax.request({
@@ -78,7 +106,10 @@ Ext.define('Traccar.controller.Root', {
         var attribution, eventId;
         Ext.getStore('Groups').load();
         Ext.getStore('Geofences').load();
+        Ext.getStore('Calendars').load();
         Ext.getStore('AttributeAliases').load();
+        Ext.getStore('ComputedAttributes').load();
+        this.initReportEventTypesStore();
         Ext.getStore('Devices').load({
             scope: this,
             callback: function () {
@@ -108,9 +139,9 @@ Ext.define('Traccar.controller.Root', {
         this.beepSound.play();
     },
 
-    mutePressed: function () {
-        var muteButton = Ext.getCmp('muteButton');
-        return muteButton && !muteButton.pressed;
+    soundPressed: function () {
+        var soundButton = Ext.getCmp('soundButton');
+        return soundButton && soundButton.pressed;
     },
 
     removeUrlParameter: function (param) {
@@ -130,12 +161,17 @@ Ext.define('Traccar.controller.Root', {
         socket = new WebSocket(protocol + '//' + window.location.host + pathname + 'api/socket');
 
         socket.onclose = function (event) {
-            Ext.toast(Strings.errorSocket, Strings.errorTitle, 'br');
+            Traccar.app.showToast(Strings.errorSocket, Strings.errorTitle);
 
             Ext.Ajax.request({
                 url: 'api/devices',
                 success: function (response) {
                     self.updateDevices(Ext.decode(response.responseText));
+                },
+                failure: function (response) {
+                    if (response.status === 401) {
+                        window.location.reload();
+                    }
                 }
             });
 
@@ -161,7 +197,8 @@ Ext.define('Traccar.controller.Root', {
                 self.updateDevices(data.devices);
             }
             if (data.positions) {
-                self.updatePositions(data.positions);
+                self.updatePositions(data.positions, first);
+                first = false;
             }
             if (data.events) {
                 self.updateEvents(data.events);
@@ -185,7 +222,7 @@ Ext.define('Traccar.controller.Root', {
         }
     },
 
-    updatePositions: function (array) {
+    updatePositions: function (array, first) {
         var i, store, entity;
         store = Ext.getStore('LatestPositions');
         for (i = 0; i < array.length; i++) {
@@ -196,34 +233,53 @@ Ext.define('Traccar.controller.Root', {
                 store.add(Ext.create('Traccar.model.Position', array[i]));
             }
         }
+        if (first) {
+            this.zoomToAllDevices();
+        }
     },
 
     updateEvents: function (array) {
-        var i, store, device, alarmKey, text, geofence;
+        var i, store, device;
         store = Ext.getStore('Events');
         for (i = 0; i < array.length; i++) {
             store.add(array[i]);
-            if (array[i].type === 'commandResult') {
-                text = Strings.eventCommandResult + ': ' + array[i].attributes.result;
-            } else if (array[i].type === 'alarm') {
-                alarmKey = 'alarm' + array[i].attributes.alarm.charAt(0).toUpperCase() + array[i].attributes.alarm.slice(1);
-                text = Strings[alarmKey] || alarmKey;
-            } else {
-                text = Traccar.app.getEventString(array[i].type);
-            }
-            if (array[i].geofenceId !== 0) {
-                geofence = Ext.getStore('Geofences').getById(array[i].geofenceId);
-                if (geofence) {
-                    text += ' \"' + geofence.get('name') + '"';
-                }
-            }
             device = Ext.getStore('Devices').getById(array[i].deviceId);
             if (device) {
-                if (this.mutePressed()) {
+                if (this.soundPressed()) {
                     this.beep();
                 }
-                Ext.toast(text, device.get('name'), 'br');
+                Traccar.app.showToast(array[i].text, device.get('name'));
             }
         }
+    },
+
+    zoomToAllDevices: function () {
+        var lat, lon, zoom;
+        lat = Traccar.app.getPreference('latitude', 0);
+        lon = Traccar.app.getPreference('longitude', 0);
+        zoom = Traccar.app.getPreference('zoom', 0);
+        if (lat === 0 && lon === 0 && zoom === 0) {
+            this.fireEvent('zoomtoalldevices');
+        }
+    },
+
+    initReportEventTypesStore: function () {
+        var store = Ext.getStore('ReportEventTypes');
+        store.add({
+            type: Traccar.store.ReportEventTypes.allEvents,
+            name: Strings.eventAll
+        });
+        Ext.create('Traccar.store.AllNotifications').load({
+            scope: this,
+            callback: function (records, operation, success) {
+                var i, value;
+                if (success) {
+                    for (i = 0; i < records.length; i++) {
+                        value = records[i].get('type');
+                        store.add({type: value, name: Traccar.app.getEventString(value)});
+                    }
+                }
+            }
+        });
     }
 });

@@ -29,6 +29,9 @@ Ext.define('Traccar.store.ReportTypes', {
         key: 'trips',
         name: Strings.reportTrips
     }, {
+        key: 'stops',
+        name: Strings.reportStops
+    }, {
         key: 'summary',
         name: Strings.reportSummary
     }, {

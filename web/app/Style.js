@@ -18,12 +18,13 @@
 Ext.define('Traccar.Style', {
     singleton: true,
 
+    refreshPeriod: 60 * 1000,
     reconnectTimeout: 60 * 1000,
 
     normalPadding: 10,
 
-    windowWidth: 640,
-    windowHeight: 480,
+    windowWidth: 800,
+    windowHeight: 600,
 
     formFieldWidth: 277,
 
@@ -34,14 +35,15 @@ Ext.define('Traccar.Style', {
     dateFormat: 'Y-m-d',
     weekStartDay: 1,
 
-    deviceWidth: 350,
+    deviceWidth: 400,
+    toastWidth: 300,
 
     reportHeight: 250,
 
     columnWidthNormal: 100,
 
-    mapDefaultLat: 12.966667,
-    mapDefaultLon: 77.566667,
+    mapDefaultLat: 1.283333,
+    mapDefaultLon: 103.833333,
     mapDefaultZoom: 4,
 
     mapRouteColor: [
@@ -67,7 +69,7 @@ Ext.define('Traccar.Style', {
     mapScaleNormal: 1,
     mapScaleSelected: 1.5,
 
-    mapMaxZoom: 19,
+    mapMaxZoom: 18,
     mapDelay: 500,
 
     mapAccuracyColor: 'rgba(96, 96, 96, 1.0)',

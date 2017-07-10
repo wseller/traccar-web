@@ -18,12 +18,24 @@
 Ext.define('Traccar.AttributeFormatter', {
     singleton: true,
 
+    numberFormatterFactory: function (precision, suffix) {
+        return function (value) {
+            if (value !== undefined) {
+                return Number(value.toFixed(precision)) + ' ' + suffix;
+            }
+        };
+    },
+
     coordinateFormatter: function (key, value) {
         return Ext.getStore('CoordinateFormats').formatValue(key, value, Traccar.app.getPreference('coordinateFormat'));
     },
 
     speedFormatter: function (value) {
         return Ext.getStore('SpeedUnits').formatValue(value, Traccar.app.getPreference('speedUnit'));
+    },
+
+    speedConverter: function (value) {
+        return Ext.getStore('SpeedUnits').convertValue(value, Traccar.app.getPreference('speedUnit'));
     },
 
     courseFormatter: function (value) {
@@ -35,9 +47,8 @@ Ext.define('Traccar.AttributeFormatter', {
         return Ext.getStore('DistanceUnits').formatValue(value, Traccar.app.getPreference('distanceUnit'));
     },
 
-    hoursFormatter: function (value) {
-        var hours = Math.round(value / 3600000);
-        return (hours + ' ' + Strings.sharedHourAbbreviation);
+    distanceConverter: function (value) {
+        return Ext.getStore('DistanceUnits').convertValue(value, Traccar.app.getPreference('distanceUnit'));
     },
 
     durationFormatter: function (value) {
@@ -49,6 +60,38 @@ Ext.define('Traccar.AttributeFormatter', {
 
     deviceIdFormatter: function (value) {
         return Ext.getStore('Devices').getById(value).get('name');
+    },
+
+    groupIdFormatter: function (value) {
+        var group, store;
+        if (value !== 0) {
+            store = Ext.getStore('AllGroups');
+            if (store.getTotalCount() === 0) {
+                store = Ext.getStore('Groups');
+            }
+            group = store.getById(value);
+            return group ? group.get('name') : value;
+        }
+    },
+
+    lastUpdateFormatter: function (value) {
+        var seconds, interval;
+
+        if (value) {
+            seconds = Math.floor((new Date() - value) / 1000);
+            if (seconds < 0) {
+                seconds = 0;
+            }
+            interval = Math.floor(seconds / 86400);
+            if (interval > 1) {
+                return interval + ' ' + Strings.sharedDays;
+            }
+            interval = Math.floor(seconds / 3600);
+            if (interval > 1) {
+                return interval + ' ' + Strings.sharedHours;
+            }
+            return Math.floor(seconds / 60) + ' ' + Strings.sharedMinutes;
+        }
     },
 
     defaultFormatter: function (value) {
@@ -76,16 +119,76 @@ Ext.define('Traccar.AttributeFormatter', {
             return this.speedFormatter;
         } else if (key === 'course') {
             return this.courseFormatter;
-        } else if (key === 'distance' || key === 'odometer' || key === 'totalDistance' || key === 'accuracy') {
+        } else if (key === 'distance' || key === 'accuracy') {
             return this.distanceFormatter;
-        } else if (key === 'hours') {
-            return this.hoursFormatter;
         } else if (key === 'duration') {
             return this.durationFormatter;
         } else if (key === 'deviceId') {
             return this.deviceIdFormatter;
+        } else if (key === 'groupId') {
+            return this.groupIdFormatter;
+        } else if (key === 'lastUpdate') {
+            return this.lastUpdateFormatter;
+        } else if (key === 'spentFuel') {
+            return this.numberFormatterFactory(Traccar.Style.numberPrecision, Strings.sharedLiterAbbreviation);
         } else {
             return this.defaultFormatter;
+        }
+    },
+
+    getConverter: function (key) {
+        if (key === 'speed') {
+            return this.speedConverter;
+        } else if (key === 'distance' || key === 'accuracy') {
+            return this.distanceConverter;
+        } else {
+            return function (value) {
+                return value;
+            };
+        }
+    },
+
+    getAttributeFormatter: function (key) {
+        var dataType = Ext.getStore('PositionAttributes').getAttributeDataType(key);
+        if (!dataType) {
+            return this.defaultFormatter;
+        } else {
+            if (dataType === 'distance') {
+                return this.distanceFormatter;
+            } else if (dataType === 'speed') {
+                return this.speedFormatter;
+            } else if (dataType === 'voltage') {
+                return this.numberFormatterFactory(Traccar.Style.numberPrecision, Strings.sharedVoltAbbreviation);
+            } else if (dataType === 'percentage') {
+                return this.numberFormatterFactory(Traccar.Style.numberPrecision, '&#37;');
+            } else if (dataType === 'temperature') {
+                return this.numberFormatterFactory(Traccar.Style.numberPrecision, '&deg;C');
+            } else if (dataType === 'volume') {
+                return this.numberFormatterFactory(Traccar.Style.numberPrecision, Strings.sharedLiterAbbreviation);
+            } else if (dataType === 'consumption') {
+                return this.numberFormatterFactory(Traccar.Style.numberPrecision, Strings.sharedLiterPerHourAbbreviation);
+            } else {
+                return this.defaultFormatter;
+            }
+        }
+    },
+
+    getAttributeConverter: function (key) {
+        var dataType = Ext.getStore('PositionAttributes').getAttributeDataType(key);
+        if (!dataType) {
+            return function (value) {
+                return value;
+            };
+        } else {
+            if (dataType === 'distance') {
+                return this.distanceConverter;
+            } else if (dataType === 'speed') {
+                return this.speedConverter;
+            } else {
+                return function (value) {
+                    return value;
+                };
+            }
         }
     }
 });

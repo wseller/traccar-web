@@ -45,7 +45,8 @@ Ext.define('Traccar.model.Position', {
         type: 'boolean'
     }, {
         name: 'accuracy',
-        type: 'float'
+        type: 'float',
+        convert: Traccar.AttributeFormatter.getConverter('accuracy')
     }, {
         name: 'latitude',
         type: 'float'
@@ -57,13 +58,8 @@ Ext.define('Traccar.model.Position', {
         type: 'float'
     }, {
         name: 'speed',
-        type: 'float'
-    }, {
-        name: 'speedConverted',
         type: 'float',
-        calculate: function (data) {
-            return Ext.getStore('SpeedUnits').convertValue(data.speed, Traccar.app.getPreference('speedUnit'));
-        }
+        convert: Traccar.AttributeFormatter.getConverter('speed')
     }, {
         name: 'course',
         type: 'float'
@@ -72,12 +68,5 @@ Ext.define('Traccar.model.Position', {
         type: 'string'
     }, {
         name: 'attributes'
-    }, {
-        name: 'distanceConverted',
-        type: 'float',
-        calculate: function (data) {
-            return Ext.getStore('DistanceUnits').convertValue(data.attributes.distance,
-                    Traccar.app.getPreference('distanceUnit'));
-        }
     }]
 });
