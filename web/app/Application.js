@@ -17,7 +17,7 @@
 
 Ext.define('Traccar.Application', {
     extend: 'Ext.app.Application',
-    name: 'Traccar',
+    name: 'Traccar Noch ein test',
 
     requires: [
         'Traccar.Style',
